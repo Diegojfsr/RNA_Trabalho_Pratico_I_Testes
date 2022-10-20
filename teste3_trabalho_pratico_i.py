@@ -14,10 +14,26 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/test.csv?raw=true'
-test = pd.read_csv(url)
+#url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/test.csv?raw=true'
+#test = pd.read_csv(url)
+#url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/train.csv?raw=true'
+#train = pd.read_csv(url)
+
+
+#dados de aprendizagem
 url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/train.csv?raw=true'
 train = pd.read_csv(url)
+
+# remove linhas contendo nan
+#train.dropna(inplace=True)
+
+# dados de teste
+url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/test.csv?raw=true'
+test = pd.read_csv(url)
+
+# Dados de envio
+url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/sample_submission.csv?raw=true'
+sample_submission = pd.read_csv(url)
 
 display(train) # Exibe o Dataframe
 
@@ -46,10 +62,16 @@ train.head()
 #dfTrain = train["HomePlanet","CryoSleep", "Cabin","Destination","Age","VIP","RoomService","FoodCourt","ShoppingMall","Spa","VRDeck","Transported"]
 dfTrain = train.drop(["PassengerId","Name"], axis = 1)
 
+# Converte os valores False e True da Coluna Transported para 0 e 1
+
+dfTrain.replace({False: 0, True: 1}, inplace=True)
+
 dfTrain.head()
 #train.info(verbose=True)
 
-OderEnc = OrdinalEncoder(cols =['HomePlanet','CryoSleep','Cabin','Destination','Age','VIP','RoomService','FoodCourt','ShoppingMall','Spa','VRDeck','Transported'])  # A variavel OrderEnc recebe os dados convertidos de Destination // Converte a coluna Destination
+# Converte as demais Colunas para dados Numericos e armazena os valores na variavel OrderEnc
+
+OderEnc = OrdinalEncoder(cols =['HomePlanet','CryoSleep','Cabin','Destination','Age','VIP','RoomService','FoodCourt','ShoppingMall','Spa','VRDeck'])  # A variavel OrderEnc recebe os dados convertidos de Destination // Converte a coluna Destination
 
 # Faz a junção da coluna convertida com as demais do Dataframe //mas descarta a conversao anterior
 
@@ -58,8 +80,8 @@ OE = OderEnc.fit_transform(dfTrain)
 ##### Verificando os valores e colunas #####
 
 #print(OE.isna().any()) # Exibe como True ou False os valores nan do Dataframe
-print(OE.isna().sum()) # Exibe a soma dos valores nan no Dataframe
-#OE.head()
+#print(OE.isna().sum()) # Exibe a soma dos valores nan no Dataframe
+OE.head()
 #OE.info(verbose=True)
 #print(OE.info())
 #OE.shape
@@ -104,18 +126,55 @@ result = ann.evaluate(X, Y)
 
 #Realizando as predições no conjunto de treino 
 
-Ypred = ann.predict(X)  #calcula o valor do veículo 
+Ypred = ann.predict(X)  #calcula o valor 
 Ypred
 
 resultado = pd.DataFrame()
 
+YpredBin = np.where(Ypred > 0.5, 1, 0)
+
 resultado["Y"] = Y
 resultado["Ypred"] = Ypred          #valores preditos para o conjunto de treinamento 
+resultado["YpredBin"] = YpredBin
 resultado.reset_index(inplace = True, drop=True)
 resultado
 
+submission = resultado.drop(["Ypred"] , axis = 1)
+submission
+
+# Fazer previsão
+
+submission.replace({0: False, 1: True})
+
+#y_pred = pd.Series(xgbc_model_full.predict(test_data)).map({0:False, 1:True})
+
+# Create submission file
+submission = pd.DataFrame({"PassengerId": Y, "Transported": YpredBin})
+submission.head()
+
+#criar um arquivo csv de saída como submit.csv
+resultado.to_csv("submission.csv", index=False)
+print('submission_final.csv foi salvo!')
+
+#submit_final.csv foi salvo!
+
+####  Acuracia medida através da sklearn  ####
 #acuracia medida através da sklearn 
+
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 #matriz de confusão do treinamento 
-mc = confusion_matrix(Y, predictions_bin)
+mc_train = confusion_matrix(Y, YpredBin)
+mc_train
+
+#To retrieve the accuracy da classificação:
+
+accuracy_train = accuracy_score(Y, YpredBin)  #mede o score (acuracy) do modelo 
+print('Acuracia do Treino:', accuracy_train)
+
+#Realizando as predições no conjunto de teste 
+
+YpredTest = ann.predict(X)
+YpredTest
+
+YpredTestBin = np.where(Ypred > 0.5, 1, 0)
