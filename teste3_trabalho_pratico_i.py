@@ -14,12 +14,6 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-#url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/test.csv?raw=true'
-#test = pd.read_csv(url)
-#url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/train.csv?raw=true'
-#train = pd.read_csv(url)
-
-
 #dados de aprendizagem
 url='https://github.com/Diegojfsr/RNA_Trabalho_Pratico_I/blob/main/train.csv?raw=true'
 train = pd.read_csv(url)
@@ -57,7 +51,7 @@ train.head()
 #train.info(verbose=True)
 
 #### Criado um Dataframe com as colunas que seram usadas   
-####  Deletendo as colunas  "PassengerId","Name","Transported"  pois nao seram uteis
+####  Deletendo as colunas  "PassengerId","Name","Transported"  pois nao serao uteis
 
 #dfTrain = train["HomePlanet","CryoSleep", "Cabin","Destination","Age","VIP","RoomService","FoodCourt","ShoppingMall","Spa","VRDeck","Transported"]
 dfTrain = train.drop(["PassengerId","Name"], axis = 1)
@@ -70,26 +64,27 @@ dfTrain.head()
 #train.info(verbose=True)
 
 # Converte as demais Colunas para dados Numericos e armazena os valores na variavel OrderEnc
+ # A variavel OrderEnc recebe os dados convertidos de Destination // Converte a coluna Destination
 
-OderEnc = OrdinalEncoder(cols =['HomePlanet','CryoSleep','Cabin','Destination','Age','VIP','RoomService','FoodCourt','ShoppingMall','Spa','VRDeck'])  # A variavel OrderEnc recebe os dados convertidos de Destination // Converte a coluna Destination
+OderEnc = OrdinalEncoder(cols =['HomePlanet','CryoSleep','Cabin','Destination','Age','VIP','RoomService','FoodCourt','ShoppingMall','Spa','VRDeck'])
 
 # Faz a junção da coluna convertida com as demais do Dataframe //mas descarta a conversao anterior
 
-OE = OderEnc.fit_transform(dfTrain)
+OderEncFit = OderEnc.fit_transform(dfTrain)
 
 ##### Verificando os valores e colunas #####
 
-#print(OE.isna().any()) # Exibe como True ou False os valores nan do Dataframe
-#print(OE.isna().sum()) # Exibe a soma dos valores nan no Dataframe
-OE.head()
-#OE.info(verbose=True)
-#print(OE.info())
-#OE.shape
-#OE.isna().sum()
-#OE.isnull().sum()
+#print(OderEncFit.isna().any()) # Exibe como True ou False os valores nan do Dataframe
+#print(OderEncFit.isna().sum()) # Exibe a soma dos valores nan no Dataframe
+OderEncFit.head()
+#OderEncFit.info(verbose=True)
+#print(OderEncFit.info())
+#OderEncFit.shape
+#OderEncFit.isna().sum()
+#OderEncFit.isnull().sum()
 
-X = OE.drop(["Transported",] , axis = 1)
-Y = OE["Transported"]
+X = OderEncFit.drop(["Transported",] , axis = 1)
+Y = OderEncFit["Transported"]
 
 X.shape
 
@@ -129,9 +124,9 @@ result = ann.evaluate(X, Y)
 Ypred = ann.predict(X)  #calcula o valor 
 Ypred
 
-resultado = pd.DataFrame()
-
 YpredBin = np.where(Ypred > 0.5, 1, 0)
+
+resultado = pd.DataFrame()
 
 resultado["Y"] = Y
 resultado["Ypred"] = Ypred          #valores preditos para o conjunto de treinamento 
@@ -139,18 +134,55 @@ resultado["YpredBin"] = YpredBin
 resultado.reset_index(inplace = True, drop=True)
 resultado
 
-submission = resultado.drop(["Ypred"] , axis = 1)
+resultado
+
+sample_submission
+
+
+
+submission2 = sample_submission.drop(["Transported"], axis = 1)
+submission2.dropna(inplace=True)
+submission2
+
+submission3 = resultado.drop(["Y","Ypred"], axis = 1)
+submission3.dropna(inplace=True)
+submission3.replace({0: False, 1: True}, inplace=True) ### Converte os valores 0/1 em True/False
+submission3
+
+# append method
+# result = submission2.append(submission3)
+# result
+
+submission = pd.concat([submission2, submission3], axis=1, join='inner')
+display(submission)
+
+## Converte o Nome da Coluna YpredBin para Transported
+
+submission = submission.rename(columns={'YpredBin': 'Transported'})
+
 submission
 
-# Fazer previsão
+#criar um arquivo csv de saída como submit.csv
 
-submission.replace({0: False, 1: True})
+submission.to_csv("submission.csv", index=False)
+print('Submission_final.csv foi salvo!')
 
-#y_pred = pd.Series(xgbc_model_full.predict(test_data)).map({0:False, 1:True})
+#submit_final.csv foi salvo!
+
+
+
+
+
+
 
 # Create submission file
-submission = pd.DataFrame({"PassengerId": Y, "Transported": YpredBin})
-submission.head()
+# submission = pd.DataFrame({"PassengerId": submission2, "Transported": submission3})
+# submission.head()
+
+df = pd.DataFrame({'PassengerId': submission2, 'Transported': submission3}, index=[0])
+df
+
+"""### Segunda Opçao de Submission"""
 
 #criar um arquivo csv de saída como submit.csv
 resultado.to_csv("submission.csv", index=False)
